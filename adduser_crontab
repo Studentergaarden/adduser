@@ -1,0 +1,11 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+MAILTO=pawse@studentergaarden.dk
+# m h dom mon dow user  command
+
+# restart cron
+# /etc/init.d/cron restart
+
+
+* * * * * root /root/scripts/lua/adduser_daemon.sh &> /home/pawse/lua/log/cron.log

@@ -1,0 +1,98 @@
+* Web interface for adding a user
+
+This is a web interface for adding users to LoKi. It gives the same
+functionality as logging onto LoKi and running =adduser user= as root.
+
+** about
+A daemon sets up - and listen to - a unix domain socket =/var/lock/sas.sock=.
+The web interface sends all info through the socket to the daemon, which then
+creates the user in =sgdb= and the linux system. A cron job checks every minute
+that the daemon is running, and starts it if not.
+If the daemon is killed, the socket file still exits - just delete it =rm -rf
+/var/lock/sas.sock=. The daemon automatically deletes the file on startup.
+
+
+The daemon is written in [[http://www.lua.org][lua]] using the [[https://github.com/esmil/lem][Lua Event Machine]] and the [[http://keplerproject.github.io/luasql/doc/us/index.html][luasql]] library.
+
+* Preparation
+** Installing support for mySQL in Lua
+
+Get the files from [[https://github.com/keplerproject/luasql][github]], =git clone https://github.com/keplerproject/luasql.git=
+
+Make sure =mysql= is uncommented as the driver in the =config= file and set the
+location of =lua.h=
+#+BEGIN_SRC sh
+# Driver (leave uncommented ONLY the line with the name of the driver)
+T= mysql
+
+# Lua includes director
+LUA_INC= /usr/src/lua/lem/lua/
+#+END_SRC
+
+and then run =make=. 
+
+*** Copy the library to Lua path
+
+When you load a module with =require=, Lua uses the package paths to determine
+where to look for the module.
+
+#+BEGIN_EXAMPLE
+package.path: Where Lua looks for .lua modules
+package.cpath: Where Lua looks for .so/.dll modules
+#+END_EXAMPLE
+
+You can check what the current paths are like with
+#+BEGIN_SRC lua
+print(package.path.."\n"..package.cpath)
+#+END_SRC
+
+Add the =mysql.so= file (dynamic linked library) to the path
+#+BEGIN_SRC sh
+mkdir -p /usr/local/lib/lua/5.2/luasql/
+cp src/mysql.so /usr/local/lib/lua/5.2/luasql/mysql.so
+#+END_SRC
+
+** Decrypting =dbconnect.inc.php= and =db_credentials.lua=
+
+=dbconnect.inc.php= and =db_credentials.lua= contains usernames and passwords
+for connecting to the MySQL databases on =Loki= and =Dragon= and are thus
+encrypted using [[https://www.agwa.name/projects/git-crypt/][git-crypt]]. They are encrypted using PGP and the
+nu@studentergaarden.dk public key.
+
+To decrypt, the corresponding private key is needed. This key is already
+installed on the root account on =LoKi= and =Dragon=. The only thing needed
+after =git clone= on =Dragon= is
+
+#+BEGIN_SRC sh
+git-crypt unlock
+#+END_SRC
+The pass phrase is the same as the one for the root user account.
+
+** Testing the unix domain socket
+The unix domain socket can be tested with =socat=
+
+#+BEGIN_SRC sh
+#setup the socket
+socat -v UNIX-LISTEN:/var/lock/sas.sock,user=www-data -
+# listen to the socket in another terminal
+socat -v READLINE UNIX-CONNECT:/var/lock/sas.sock
+#+END_SRC
+
+The web interface should now be able to communicate through the socket.
+
+* Install
+
+In short, logon to LoKi and do the following
+(remember that you need to give the full path, when making soft links.)
+
+#+BEGIN_SRC sh
+ssh user@loki
+git clone git@github.com:Studentergaarden/adduser.git
+# or maybe
+git clone https://github.com/Studentergaarden/adduser.git
+cd adduser
+git-crypt unlock
+ln -s /full/path/web/{validUser.php,jquery-1.11.2.min.js,createUser.php} /share/sites/sas.studentergaarden.dk/DocumentRoot/
+ln -s /full/path/adduser_crontab /etc/cron.d/adduser_crontab
+ln -s /full/path/adduser_daemon.sh /root/scripts/lua/adduser_daemon.sh
+#+END_SRC
