@@ -14,7 +14,6 @@ end
 local inspect = require 'inspect'
 
 local io = require 'lem.io'
-local iolua = require 'io'
 local queue = require 'lem.io.queue'
 local os = require 'os'
 
