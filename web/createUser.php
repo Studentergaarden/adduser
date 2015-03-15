@@ -1,15 +1,43 @@
 <?php
 session_start();
+?>
+
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <link href="sas.css" rel="stylesheet" type="text/css">
+  <title>SAS v. 3.0 - Studentergaarden Administration System</title>
+  <script src="jquery-1.11.2.min.js"> </script>
+</head>
+<body>
+
+  <center>
+    <table width=90%><tr><td>
+
+<?php
 $admin = (array_key_exists("admin_id", $_SESSION)) ? $_SESSION['admin_id'] : "false";
 
 if($admin === "false"){
 	die("Du er ikke logget ind");
 }
+$create = (array_key_exists("create", $_POST)) 			? $_POST["create"] : "";
 
-	$create = (array_key_exists("create", $_POST)) 			? $_POST["create"] : "";
-	
+/*
+ * Integrate with the existing SAS menu - ugly!
+ */
+$sid = session_id();
+include("init.inc.php");
+include("common.inc.php");
+mysql_connect("$dbServer","$dbUser","$dbPassword");
+menu($sid,$dbName,"grp");
+print "<hr width=\"100%\">\n";
+/*
+ * End integration
+ */
+
 if($create === "true"){
 
+  
 	$name = (array_key_exists("name", $_POST)) 			? $_POST["name"] : "";
 	$username = (array_key_exists("username", $_POST)) 	? $_POST["username"] : "";
 	$password = (array_key_exists("password", $_POST)) 	? $_POST["password"] : "";
@@ -41,10 +69,10 @@ if($create === "true"){
 }';
 
 	/*
-	* remove newlines in the string
-	* each newline is sent separately - it is easier to set up the daemon
-	* to handle one long line, instead of multiple. The string needs to be
-	* terminated.
+     * remove newlines in the string
+     * each newline is sent separately - it is easier to set up the daemon
+     * to handle one long line, instead of multiple. The string needs to be
+     * terminated.
 	*/
 	$json = trim(preg_replace('/\s+/', ' ', $json));
 	$json = $json . "\n";
@@ -62,23 +90,19 @@ if($create === "true"){
 
     echo("Receiving Message...<br>\n");
     if (!($rcv_msg = fread($socket, 1024))) 
-            echo("Error while reading!!!<br>\n");
-    else{ 
-    	if($rcv_msg == "succes:1"){
-		echo "Brugeren er oprettet!";
-	}else{
-		echo "Der gik noget galt, prøv en gang til.";
-	}
+      echo("Læsningen fra serveren gik galt. Prøv igen om lidt!<br>\n");
+    else{
+      if( strcmp($rcv_msg, "success:1\n") == 0){
+        echo('<span style="color:green;">Brugeren er oprettet! </span>');
+      }else{
+        echo('<span style="color:green;">Der gik noget galt, prøv en gang til.');
+      }
     }
 }
 
 
 ?>
-<html>
-	<head>
-		<script src="jquery-1.11.2.min.js"> </script>
-	</head>
-	<body>
+
 		<form id="userForm" action="?" method="POST">
 			<table>
 				<tr>
@@ -97,11 +121,14 @@ if($create === "true"){
 					<td>Study</td><td><input type="text" name="study" /></td>
 				</tr>
 				<tr>
-					<td>Room</td><td><input type="text" id="room" name="room" /></td><td>Rum ligger indenfor 100-599, underetagen er 501-599</td>
+					<td>Room</td><td><input type="text" id="room" name="room" /></td>
 				</tr>
+				<tr><td></td><td>
+				Room-nr. is between:  100-599, <br> Ground floors(Cosmos, Undergangen, Bersærk) are 501-599
+				</td></tr>
 				<tr>
 					<td>Status:</td>
-					<td> 
+					<td>
 						<select name="status">
 							<option value="fremlejer">Fremlejer</option>
 							<option value="normal">Normal</option>
@@ -119,6 +146,8 @@ if($create === "true"){
 				</tr>
 			</table>
 		</form>
+        </td></tr></table>
+        </center>
 		<script>
 			var validCol = "aaffaa";
 			var notValidCol = "ffaaaa";

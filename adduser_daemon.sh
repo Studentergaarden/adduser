@@ -1,4 +1,5 @@
 #! /bin/bash
+# -*- coding: utf-8 -*-
 
 # exit 0
 
@@ -17,7 +18,7 @@ case "$(pgrep -f adduser_daemon.lua | wc -w)" in
 
 0)  echo "Restarting daemon:     $(date)" >> $logfile
     rm -rf /var/lock/sas.sock
-    nohup /home/pawse/lua/adduser/adduser_daemon.lua >> $toutfile 2> $errorfile &
+    nohup /home/pawse/lua/adduser/lua/adduser_daemon.lua >> $toutfile 2> $errorfile &
     ;;
 1)  # all ok
     ;;

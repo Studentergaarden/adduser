@@ -10,7 +10,8 @@ creates the user in =sgdb= and the linux system. A cron job checks every minute
 that the daemon is running, and starts it if not.
 If the daemon is killed, the socket file still exits - just delete it =rm -rf
 /var/lock/sas.sock=. The daemon automatically deletes the file on startup.
-
+If you want to temporally disable the daemon, the easiest ting is to uncomment
+=exit 0= in =adduser_daemon.sh=
 
 The daemon is written in [[http://www.lua.org][lua]] using the [[https://github.com/esmil/lem][Lua Event Machine]] and the [[http://keplerproject.github.io/luasql/doc/us/index.html][luasql]] library.
 
@@ -96,3 +97,5 @@ ln -s /full/path/web/{validUser.php,jquery-1.11.2.min.js,createUser.php} /share/
 ln -s /full/path/adduser_crontab /etc/cron.d/adduser_crontab
 ln -s /full/path/adduser_daemon.sh /root/scripts/lua/adduser_daemon.sh
 #+END_SRC
+
+Change the logging and script path respectively in =adduser_crontab= and =adduser_daemon.sh=

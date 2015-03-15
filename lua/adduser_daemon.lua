@@ -1,8 +1,20 @@
 #!/usr/bin/env lem
+-- -*- coding: utf-8 -*-
+
+-- the package path is relative to where the script is called from.
+-- this add the folder containing the script to the path! always!
+function script_path()
+   local str = debug.getinfo(2, "S").source:sub(2)
+   return str:match("(.*/)")
+end
+if (script_path() ~= nil) then
+	package.path =  package.path .. ';' .. script_path() .. '?.lua'
+end
 
 local inspect = require 'inspect'
 
 local io = require 'lem.io'
+local iolua = require 'io'
 local queue = require 'lem.io.queue'
 local os = require 'os'
 
@@ -12,12 +24,12 @@ local db  = require 'db_credentials'
 
 local sock_file = '/var/lock/sas.sock'
 -- check if sock file exist
-local f=io.open(sock_file,"r")
-if f~=nil then
-	io.close(f)
+local socket = io.unix.listen(sock_file)
+-- socket is nil, if the file exists
+if socket == nil then
 	os.remove(sock_file)
+	socket = assert(io.unix.listen(sock_file))
 end
-local socket = assert(io.unix.listen(sock_file))
 local clients = {}
 
 -- give apache permission to use the unix socket
@@ -110,14 +122,13 @@ function useradd(t)
 
     -- create user
     cmd = string.format("useradd -m -c '%s' -p '%s' %s",t["name"], t["password"], t["username"])
-    print(cmd)
+    -- print(cmd)
     local rtn = os.capture(cmd, true)
-    print("useradd rtn: ", rtn)
 
     -- get UID, GID, homedir from /etc/passwd file
     cmd = string.format("sed -n '/^%s:/p' /etc/passwd", t["username"])
     local rtn = os.capture(cmd)
-    print("sed : ", rtn)
+    -- print("sed : ", rtn)
     local info = mysplit(rtn,':')
     t["uid"], t["gid"], t["userdir"] = info[3], info[4], info[6]
 
@@ -147,15 +158,13 @@ socket:autospawn(function(client)
 
 		local t = parse_qs(line)
 		print('inspect: ' .. inspect(t))
-		print('line: ' .. line)
-		print(t["password"])
 
 		t = useradd(t)
 		t = insertSAS(t)
 
 		for c, _ in pairs(clients) do
 			if c == self then
-				c:write(string.format('succes:1\r\n'))
+				c:write(string.format('success:1\n'))
 			end
 		end
 	end
@@ -163,7 +172,6 @@ socket:autospawn(function(client)
 	clients[self] = nil
 	client:close()
 end)
-
 
 
 
