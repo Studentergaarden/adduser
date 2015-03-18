@@ -8,7 +8,7 @@ A daemon sets up - and listen to - a unix domain socket =/var/lock/sas.sock=.
 The web interface sends all info through the socket to the daemon, which then
 creates the user in =sgdb= and the linux system. A cron job checks every minute
 that the daemon is running, and starts it if not.
-If the daemon is killed, the socket file still exits - just delete it =rm -rf
+If the daemon is killed, the socket file still exits - just delete it using =rm -rf
 /var/lock/sas.sock=. The daemon automatically deletes the file on startup.
 If you want to temporally disable the daemon, the easiest ting is to uncomment
 =exit 0= in =adduser_daemon.sh=
@@ -69,18 +69,6 @@ git-crypt unlock
 #+END_SRC
 The pass phrase is the same as the one for the root user account.
 
-** Testing the unix domain socket
-The unix domain socket can be tested with =socat=
-
-#+BEGIN_SRC sh
-#setup the socket
-socat -v UNIX-LISTEN:/var/lock/sas.sock,user=www-data -
-# listen to the socket in another terminal
-socat -v READLINE UNIX-CONNECT:/var/lock/sas.sock
-#+END_SRC
-
-The web interface should now be able to communicate through the socket.
-
 * Install
 
 In short, logon to LoKi and do the following
@@ -98,4 +86,127 @@ ln -s /full/path/adduser_crontab /etc/cron.d/adduser_crontab
 ln -s /full/path/adduser_daemon.sh /root/scripts/lua/adduser_daemon.sh
 #+END_SRC
 
-Change the logging and script path respectively in =adduser_crontab= and =adduser_daemon.sh=
+Change the log and script path respectively in =adduser_crontab= and =adduser_daemon.sh=
+* Debugging
+** Testing the unix domain socket
+The unix domain socket can be tested with =socat=
+
+#+BEGIN_SRC sh
+#setup the socket
+socat -v UNIX-LISTEN:/var/lock/sas.sock,user=www-data -
+# listen to the socket in another terminal
+socat -v READLINE UNIX-CONNECT:/var/lock/sas.sock
+#+END_SRC
+
+The web interface should now be able to communicate through the socket.
+
+** General about processes
+
+A process have an PID(Process ID), PPID(Parent Process ID), PGID(Process Group
+ID) and SID(Session ID). PPID is the id of the process that started the process
+in question. Sessions and process groups are just ways to treat a number of
+related processes as a unit. All the members of a process group always belong to
+the same session, but a session may have multiple process groups.
+
+Normally, a shell will be a session leader, and every pipeline executed by that
+shell will be a process group. This is to make it easy to kill the children of a
+shell when it exits.
+
+To view these IDs, use
+#+BEGIN_SRC sh
+ps xao pid,ppid,pgid,sid,comm | grep name
+ps aux | grep name
+#+END_SRC
+
+See the [[http://www.gsp.com/cgi-bin/man.cgi?topic%3Dps][man]] for ps.
+
+** Detach process from terminal
+
+There are two ways to detach processes, =nohub= and =disown=.
+
+*** =disown= - used after the job is started
+=disown= removes the job from the shell's job list(fg, bg, jobs cannot be used).
+According to most pages I read, the following seems to true
+
+#+BEGIN_QUOTE
+Processes wont receive =sighup=. However note that it still is connected to the
+terminal, so if the terminal is destroyed (which can happen if it was a pty,
+like those created by xterm or ssh, and the controlling program is terminated,
+by closing the xterm or terminating the SSH connection), the program will fail
+as soon as it tries to read from standard input or write from standard output.
+
+In order to avoid the process to die when the controlling program is closed, use
+=disown -h=. This is the same as using =nohup= in =bash=. =zsh= does not have
+any arguments for the implementation of =disown=.
+#+END_QUOTE
+
+However I have not seen any difference between =disown= and =disown -h=. Neither
+is the process SIGHUP'ed when the controlling program is closed.
+
+#+BEGIN_SRC sh
+./my-prog.sh
+C-z
+bg
+disown # or disown %1
+# or simply
+./my-prog.sg &!
+#+END_SRC
+
+
+*** =nohup= - used when the job is closed
+
+=nohup= redirects standard output and standard error to the file nohup.out, so
+the program won't fail for writing to standard output if the terminal fails, and
+whatever the process writes is not lost. It does not remove the process from the
+shell's job control and also does not put it in the background (but since a
+foreground nohup job is more or less useless, you'd generally put it into the
+background using &). For example, unlike with =disown=, the shell will still
+tell you when the nohup job has completed (unless the shell is terminated
+before, of course).
+
+
+#+BEGIN_SRC sh
+nohup ./my-prog.sh &
+#+END_SRC
+
+
+To summerize =nohup= and =disown= both can be said to suppress SIGHUP, but in
+different ways. =nohup= makes the program ignore the signal initially (the
+program may change this). nohup also tries to arrange for the program not to
+have a controlling terminal, so that it won't be sent SIGHUP by the kernel when
+the terminal is closed. =disown= is purely internal to the shell; it causes the
+shell not to send SIGHUP when it terminates. When the parent shell died, and the
+shell was the session leader in charge of the controlling =tty=, the process
+does not have a tty anymore( shown as ? in the tty column in ps-output) .
+Additionally the process gets =init=, with PID 1, as a new parent process.
+
+
+** Attach a detached process
+
+[[https://github.com/nelhage/reptyr/][reptyr]] is a utility for taking an existing running program and attaching it to a
+new terminal. On debian Lenny [[https://github.com/nelhage/reptyr/archive/debian/reptyr-0.3-2.tar.gz][reptyr-0.3-2]] has to be used due to an old version
+of =glibc=.
+
+
+In case reptyr gives the following error:
+#+BEGIN_EXAMPLE
+$ reptyr 1851
+Unable to attach to pid 1851: Operation not permitted
+The kernel denied permission while attaching. If your uid matches
+the target's, check the value of /proc/sys/kernel/yama/ptrace_scope.
+For more information, see /etc/sysctl.d/10-ptrace.conf
+#+END_EXAMPLE
+
+It means that the kernel is running in a lesser permissive mode when it comes to
+attaching processes. Only attaching direct child processes are allowed to harden
+the kernel. To get reptyr working =/etc/sysctl.d/10-ptrace.conf= to be
+
+#+BEGIN_SRC sh
+kernel.yama.ptrace_scope = 0
+#+END_SRC
+
+Then reload the sysctl rule
+
+#+BEGIN_SRC sh
+sudo sysctl -p /etc/sysctl.d/10-ptrace.conf
+#+END_SRC
