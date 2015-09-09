@@ -210,3 +210,7 @@ Then reload the sysctl rule
 #+BEGIN_SRC sh
 sudo sysctl -p /etc/sysctl.d/10-ptrace.conf
 #+END_SRC
+
+
+https://blogs.oracle.com/ksplice/entry/disown_zombie_children_and_the
+http://askubuntu.com/questions/506510/what-is-the-difference-between-terminal-console-shell-and-command-line

@@ -87,7 +87,9 @@ function insertSAS(t)
     local con = env:connect(db["table"],db["user"],db["password"],db["host"])
     local mtime = os.date("%Y-%m-%d %X")
 
-    -- insert into name table. name_id is auto-incremented
+	-- SEE IF ROOM IS OCCUPIED
+    
+-- insert into name table. name_id is auto-incremented
     local str = string.format("INSERT INTO name SET name='%s',room='%s',title='%s',status='%s',public='1',mtime='%s';",
                               t["name"], t["room"], t["study"], t["status"], mtime)
     print(str)
@@ -99,8 +101,9 @@ function insertSAS(t)
     res = assert(con:execute(str))
     t["nid"] = res:fetch()
 
-    if (t["phone"] ~= nil or t["phone"] ~= '') then
-        str = string.format("INSERT INTO info (info ,name_id, type, public, mtime) VALUES (%s, %s, 'mobil', '0', now())",
+    
+    if (t["phone"] ~= nil and t["phone"] ~= '') then
+        str = string.format("INSERT INTO info (info ,name_id, type, public, mtime) VALUES ('%s', %s, 'mobil', '0', now())",
                             t["phone"], t["nid"])
         print(str)
         res = assert(con:execute(str))
@@ -146,6 +149,18 @@ function useradd(t)
     return t
 end
 
+local function create_msg(t,template)
+  -- create return string in url format:
+  -- key=val&key2=val2
+  template = template or '%s=%s&'
+  local tt = {}
+  for k,v in pairs(t) do
+    tt[#tt+1] = template:format(k,tostring(v))
+  end
+  local ret = table.concat(tt)
+  -- remove last &
+  return ret:sub(1, -2)
+end
 
 socket:autospawn(function(client)
 	local self = queue.wrap(client)
@@ -159,12 +174,15 @@ socket:autospawn(function(client)
 		print('inspect: ' .. inspect(t))
 
 		t = useradd(t)
-		t = insertSAS(t)
+		-- There's problem with utf8 encoding and mysql. Do the sas stuff php instead.
+		--t = insertSAS(t)
 
 		for c, _ in pairs(clients) do
-			if c == self then
-				c:write(string.format('success:1\n'))
-			end
+		  if c == self then
+		    t['success'] = '1';
+		    local ret = create_msg(t)
+		    c:write(ret)
+		  end
 		end
 	end
 
@@ -175,6 +193,6 @@ end)
 
 
 -- Local Variables:
--- lua-indent-level: 4
+-- lua-indent-level: 2
 -- indent-tabs-mode: t
 -- End:
