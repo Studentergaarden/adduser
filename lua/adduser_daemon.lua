@@ -1,6 +1,7 @@
 #!/usr/bin/env lem
 -- -*- coding: utf-8 -*-
 
+
 -- the package path is relative to where the script is called from.
 -- this add the folder containing the script to the path! always!
 function script_path()
@@ -112,7 +113,7 @@ function insertSAS(t)
     -- insert into user table
     str = string.format("INSERT INTO user SET user_id='%s', user='%s', name_id='%s', print='10', public='1', mtime='%s';",
                         t["uid"], t["username"], t["nid"], mtime)
-    print(str)
+    --print(str)
     res = assert(con:execute(str))
 
     return t
@@ -134,7 +135,7 @@ function useradd(t)
     local info = mysplit(rtn,':')
     t["uid"], t["gid"], t["userdir"] = info[3], info[4], info[6]
 
-    print(inspect(info))
+    --print(inspect(info))
 
     -- create maildir
     local maildir="/var/mail/maildirs/studentergaarden.dk/" .. t["username"]
@@ -147,6 +148,14 @@ function useradd(t)
     assert(os.execute(string.format("chmod 660  %s/.forward", t["userdir"])))
 
     return t
+end
+
+local function log_user(t)
+  local file = io.open("/var/log/adduser.log", "a")
+  local time = os.date("*t")
+  file:write(("  %04d/%02d/%02d %02d:%02d:%02d"):format(time.year, time.month, time.day, time.hour, time.min, time.sec))
+  file:write('added user: ' .. t["username"] .. "\n")
+  file:close()
 end
 
 local function create_msg(t,template)
@@ -171,9 +180,10 @@ socket:autospawn(function(client)
 		if not line then break end
 
 		local t = parse_qs(line)
-		print('inspect: ' .. inspect(t))
+		--print('inspect: ' .. inspect(t))
 
 		t = useradd(t)
+		log_user(t)
 		-- There's problem with utf8 encoding and mysql. Do the sas stuff php instead.
 		--t = insertSAS(t)
 
