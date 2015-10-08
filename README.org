@@ -16,43 +16,6 @@ If you want to temporally disable the daemon, the easiest ting is to uncomment
 The daemon is written in [[http://www.lua.org][lua]] using the [[https://github.com/esmil/lem][Lua Event Machine]] and the [[http://keplerproject.github.io/luasql/doc/us/index.html][luasql]] library.
 
 * Preparation
-** Installing support for mySQL in Lua
-
-Get the files from [[https://github.com/keplerproject/luasql][github]], =git clone https://github.com/keplerproject/luasql.git=
-
-Make sure =mysql= is uncommented as the driver in the =config= file and set the
-location of =lua.h=
-#+BEGIN_SRC sh
-# Driver (leave uncommented ONLY the line with the name of the driver)
-T= mysql
-
-# Lua includes director
-LUA_INC= /usr/src/lua/lem/lua/
-#+END_SRC
-
-and then run =make=. 
-
-*** Copy the library to Lua path
-
-When you load a module with =require=, Lua uses the package paths to determine
-where to look for the module.
-
-#+BEGIN_EXAMPLE
-package.path: Where Lua looks for .lua modules
-package.cpath: Where Lua looks for .so/.dll modules
-#+END_EXAMPLE
-
-You can check what the current paths are like with
-#+BEGIN_SRC lua
-print(package.path.."\n"..package.cpath)
-#+END_SRC
-
-Add the =mysql.so= file (dynamic linked library) to the path
-#+BEGIN_SRC sh
-mkdir -p /usr/local/lib/lua/5.2/luasql/
-cp src/mysql.so /usr/local/lib/lua/5.2/luasql/mysql.so
-#+END_SRC
-
 ** Decrypting =dbconnect.inc.php= and =db_credentials.lua=
 
 =dbconnect.inc.php= and =db_credentials.lua= contains usernames and passwords
@@ -180,7 +143,6 @@ shell was the session leader in charge of the controlling =tty=, the process
 does not have a tty anymore( shown as ? in the tty column in ps-output) .
 Additionally the process gets =init=, with PID 1, as a new parent process.
 
-
 ** Attach a detached process
 
 [[https://github.com/nelhage/reptyr/][reptyr]] is a utility for taking an existing running program and attaching it to a
@@ -214,3 +176,42 @@ sudo sysctl -p /etc/sysctl.d/10-ptrace.conf
 
 https://blogs.oracle.com/ksplice/entry/disown_zombie_children_and_the
 http://askubuntu.com/questions/506510/what-is-the-difference-between-terminal-console-shell-and-command-line
+* Deprecated info
+Because of problems with lua, mySQL and UTF-8, all the database stuff is now done in php.
+The following info is not relevant anymore, but kept for reference.
+** Installing support for mySQL in Lua
+
+Get the files from [[https://github.com/keplerproject/luasql][github]], =git clone https://github.com/keplerproject/luasql.git=
+
+Make sure =mysql= is uncommented as the driver in the =config= file and set the
+location of =lua.h=
+#+BEGIN_SRC sh
+# Driver (leave uncommented ONLY the line with the name of the driver)
+T= mysql
+
+# Lua includes director
+LUA_INC= /usr/src/lua/lem/lua/
+#+END_SRC
+
+and then run =make=. 
+
+*** Copy the library to Lua path
+
+When you load a module with =require=, Lua uses the package paths to determine
+where to look for the module.
+
+#+BEGIN_EXAMPLE
+package.path: Where Lua looks for .lua modules
+package.cpath: Where Lua looks for .so/.dll modules
+#+END_EXAMPLE
+
+You can check what the current paths are like with
+#+BEGIN_SRC lua
+print(package.path.."\n"..package.cpath)
+#+END_SRC
+
+Add the =mysql.so= file (dynamic linked library) to the path
+#+BEGIN_SRC sh
+mkdir -p /usr/local/lib/lua/5.2/luasql/
+cp src/mysql.so /usr/local/lib/lua/5.2/luasql/mysql.so
+#+END_SRC

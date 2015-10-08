@@ -18,10 +18,6 @@ local io = require 'lem.io'
 local queue = require 'lem.io.queue'
 local os = require 'os'
 
--- mySQL
-local env = require 'luasql.mysql'.mysql()
-local db  = require 'db_credentials'
-
 local sock_file = '/var/lock/sas.sock'
 -- check if sock file exist
 local socket = io.unix.listen(sock_file)
@@ -81,47 +77,9 @@ function mysplit(inputstr, sep)
     return t
 end
 
-function insertSAS(t)
-    -- mySQL related stuff
-
-
-    local con = env:connect(db["table"],db["user"],db["password"],db["host"])
-    local mtime = os.date("%Y-%m-%d %X")
-
-	-- SEE IF ROOM IS OCCUPIED
-    
--- insert into name table. name_id is auto-incremented
-    local str = string.format("INSERT INTO name SET name='%s',room='%s',title='%s',status='%s',public='1',mtime='%s';",
-                              t["name"], t["room"], t["study"], t["status"], mtime)
-    print(str)
-    local res = assert(con:execute(str))
-
-    -- get name_id
-    str = string.format("SELECT name_id from name WHERE name='%s' AND room='%s';",t["name"], t["room"]);
-    print(str)
-    res = assert(con:execute(str))
-    t["nid"] = res:fetch()
-
-    
-    if (t["phone"] ~= nil and t["phone"] ~= '') then
-        str = string.format("INSERT INTO info (info ,name_id, type, public, mtime) VALUES ('%s', %s, 'mobil', '0', now())",
-                            t["phone"], t["nid"])
-        print(str)
-        res = assert(con:execute(str))
-    end
-
-    -- insert into user table
-    str = string.format("INSERT INTO user SET user_id='%s', user='%s', name_id='%s', print='10', public='1', mtime='%s';",
-                        t["uid"], t["username"], t["nid"], mtime)
-    --print(str)
-    res = assert(con:execute(str))
-
-    return t
-end
-
 
 function useradd(t)
-	-- OS related stuff
+    -- OS related stuff
 
     -- create user
     cmd = string.format("useradd -m -c '%s' -p '%s' %s",t["name"], t["password"], t["username"])
@@ -184,8 +142,7 @@ socket:autospawn(function(client)
 
 		t = useradd(t)
 		log_user(t)
-		-- There's problem with utf8 encoding and mysql. Do the sas stuff php instead.
-		--t = insertSAS(t)
+		-- There's problem with utf8 encoding and mysql. Do the sas stuff in php instead.
 
 		for c, _ in pairs(clients) do
 		  if c == self then
