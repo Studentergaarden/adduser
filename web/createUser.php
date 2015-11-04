@@ -147,7 +147,7 @@ if($create === "true"){
 					<td>Username</td><td><input type="text" id="username" name="username" /></td>
 				</tr>
 				<tr><td></td><td>
-		   		<b>username</b> skal være uden mellemrum og kun med små bogstaver.<br>
+		   		<b>username</b> skal være uden mellemrum og kun med <font color="red">små bogstaver</font>.<br>
 		   		Hvis feltet lyser rødt, er det fordi brugernavnet er optaget eller ugyldigt.
 		   		</td></tr>
 				<tr>
